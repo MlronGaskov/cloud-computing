@@ -1,0 +1,2 @@
+{:lint-as {cloud.remote/defremote clojure.core/defn}}
+{:linters {:earmuffed-var-not-dynamic {:level :off} :unresolved-namespace {:level :off}}}

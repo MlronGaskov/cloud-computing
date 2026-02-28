@@ -1,0 +1,35 @@
+services:
+  coordinator:
+    build:
+      context: ..
+      dockerfile: docker/coordinator.Dockerfile
+    environment:
+      - COORDINATOR_PORT=8080
+    ports:
+      - "8080:8080"
+
+  worker1:
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    environment:
+      - WORKER_ID=worker1
+      - WORKER_HOST=worker1
+      - WORKER_PORT=8090
+      - COORDINATOR_HOST=coordinator
+      - COORDINATOR_PORT=8080
+    depends_on:
+      - coordinator
+
+  worker2:
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    environment:
+      - WORKER_ID=worker2
+      - WORKER_HOST=worker2
+      - WORKER_PORT=8090
+      - COORDINATOR_HOST=coordinator
+      - COORDINATOR_PORT=8080
+    depends_on:
+      - coordinator
