@@ -3,9 +3,10 @@
   (:import (java.io PushbackReader StringReader)))
 
 (defn ns->resource-base
-      ^String [ns-sym]
-      (-> (name ns-sym)
-          (clojure.string/replace "." "/")))
+  ^String [ns-sym]
+  (-> (name ns-sym)
+      (clojure.string/replace "." "/")
+      (clojure.string/replace "-" "_")))
 
 (defn find-ns-resource
       [ns-sym]
