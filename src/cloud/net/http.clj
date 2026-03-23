@@ -28,12 +28,18 @@
     (handle [_ ex]
       (try
         (let [m (method ex)
-              req (when (#{:post :put} m)
-                    (codec/decode (read-body ex)))
-              res (f {:method      m
-                      :path        (.getPath (.getRequestURI ex))
-                      :req         req
-                      :remote-addr (str (.getRemoteAddress ex))})]
+              {:keys [value loader]}
+              (if (#{:post :put} m)
+                (codec/decode-with-loader (read-body ex))
+                {:value nil
+                 :loader (.getContextClassLoader (Thread/currentThread))})
+              res (codec/with-context-classloader
+                    loader
+                    (fn []
+                      (f {:method      m
+                          :path        (.getPath (.getRequestURI ex))
+                          :req         value
+                          :remote-addr (str (.getRemoteAddress ex))})))]
           (write-body! ex 200 (codec/encode res)))
         (catch Throwable t
           (log/error "http handler error" {:ex (str t)})

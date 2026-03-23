@@ -2,7 +2,7 @@
   (:require [cloud.code.bundle :as bundle]
             [cloud.net.http :as http]
             [cloud.util.log :as log])
-  (:import (java.util.concurrent Executors Callable TimeUnit)))
+  (:import (java.util.concurrent Callable Executors TimeUnit)))
 
 (defonce coord (atom nil))
 (defonce registry (atom {}))
@@ -22,10 +22,10 @@
 (defn register-fn!
   [{:keys [fn-id entry-var]}]
   (let [b (bundle/build-bundle entry-var)
-        payload {:fn-id  fn-id
+        payload {:fn-id fn-id
                  :bundle (bundle/transport-bundle b)}]
-    (http/post-edn {:url        (coord-url "/register-fn")
-                    :body       payload
+    (http/post-edn {:url (coord-url "/register-fn")
+                    :body payload
                     :timeout-ms 60000})))
 
 (defn deploy!
@@ -41,8 +41,8 @@
 
 (defn call
   [fn-id & args]
-  (http/post-edn {:url        (coord-url "/invoke")
-                  :body       {:fn-id fn-id :args args}
+  (http/post-edn {:url (coord-url "/invoke")
+                  :body {:fn-id fn-id :args args}
                   :timeout-ms 300000}))
 
 (defn seqable-coll?
@@ -64,7 +64,7 @@
     (max 1 sz)))
 
 (defn dmap*
-  [{:keys [batch-id workers] :as _opts} items]
+  [{:keys [batch-id workers]} items]
   (let [items (vec items)
         w (max 1 (long (or workers 1)))
         chunk-size (pick-chunk-size (count items) w)
@@ -114,10 +114,8 @@
                           (reify Callable
                             (call [_] (f x))))
                         items)
-            futures (.invokeAll pool tasks)
-            out (mapv (fn [^java.util.concurrent.Future fu] (.get fu))
-                      futures)]
-        out)
+            futures (.invokeAll pool tasks)]
+        (mapv (fn [^java.util.concurrent.Future fu] (.get fu)) futures))
       (finally
         (.shutdown pool)
         (.awaitTermination pool 5 TimeUnit/SECONDS)))))
@@ -155,7 +153,7 @@
                     (cloud.remote/seqable-coll? ~(first args)))
              (let [items# ~(first args)]
                (cloud.remote/dmap* {:batch-id ~batch-id
-                                    :workers  (:workers opts#)}
+                                    :workers (:workers opts#)}
                                    items#))
              (let [res# (cloud.remote/call ~fn-id ~@args)]
                (if (:ok res#)
