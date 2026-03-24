@@ -3,11 +3,6 @@
             [cloud.net.http :as http]
             [cloud.util.log :as log]))
 
-(defn- task-payload [bundle args]
-  {:bundle  bundle
-   :invoke? true
-   :args    args})
-
 (defn- dispatch-job!
   [st job]
   (let [{:keys [promise fn-id args]} job
@@ -22,8 +17,8 @@
           (try
             (state/set-worker-seen! st worker-id)
             (let [bundle (state/get-fn-bundle st fn-id)
-                  resp (http/post-edn {:url        (str "http://" (:host worker) ":" (:port worker) "/task")
-                                       :body       {:bundle bundle :args args}
+                  resp (http/post-edn {:url (str "http://" (:host worker) ":" (:port worker) "/task")
+                                       :body {:bundle bundle :args args}
                                        :timeout-ms 300000})]
               (deliver promise resp))
             (catch Throwable t
@@ -32,8 +27,7 @@
               (state/mark-busy! st worker-id false)
               (loop []
                 (when-let [next (state/dequeue! st)]
-                  (if (= :queued (dispatch-job! st next))
-                    (state/enqueue! st next)
+                  (when (= :sent (dispatch-job! st next))
                     (recur)))))))
         :sent))))
 
@@ -58,20 +52,20 @@
 
    "/invoke"
    (fn [{:keys [req]}]
-     (let [{:keys [fn-id args]} req
-           p (promise)
-           job {:fn-id fn-id :args args :promise p}]
-       (when-not (state/get-fn-bundle st fn-id)
-         {:ok false :error (str "Unknown fn-id: " fn-id)})
-       (dispatch-job! st job)
-       @p))
+     (let [{:keys [fn-id args]} req]
+       (if-not (state/get-fn-bundle st fn-id)
+         {:ok false :error (str "Unknown fn-id: " fn-id)}
+         (let [p (promise)
+               job {:fn-id fn-id :args args :promise p}]
+           (dispatch-job! st job)
+           @p))))
 
    "/status"
    (fn [_]
      (let [s (state/snapshot st)]
-       {:ok         true
-        :workers    (->> (vals (:workers s))
-                         (map #(select-keys % [:worker-id :host :port :busy? :last-seen]))
-                         (sort-by :worker-id))
-        :fns        (->> (keys (:fns s)) sort vec)
+       {:ok true
+        :workers (->> (vals (:workers s))
+                      (map #(select-keys % [:worker-id :host :port :busy? :last-seen]))
+                      (sort-by :worker-id))
+        :fns (->> (keys (:fns s)) sort vec)
         :queue-size (count (:queue s))}))})
