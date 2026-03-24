@@ -1,0 +1,57 @@
+services:
+  coordinator:
+    image: clojure:temurin-21-tools-deps
+    working_dir: /app
+    volumes:
+      - ..:/app
+    environment:
+      COORDINATOR_PORT: "8080"
+    command: >-
+      sh -lc 'clojure -M:coordinator'
+
+  worker1:
+    image: clojure:temurin-21-tools-deps
+    working_dir: /app
+    depends_on:
+      - coordinator
+    volumes:
+      - ..:/app
+    environment:
+      WORKER_ID: worker-1
+      WORKER_HOST: worker1
+      WORKER_PORT: "8090"
+      COORDINATOR_HOST: coordinator
+      COORDINATOR_PORT: "8080"
+    command: >-
+      sh -lc 'clojure -M:worker'
+
+  worker2:
+    image: clojure:temurin-21-tools-deps
+    working_dir: /app
+    depends_on:
+      - coordinator
+    volumes:
+      - ..:/app
+    environment:
+      WORKER_ID: worker-2
+      WORKER_HOST: worker2
+      WORKER_PORT: "8090"
+      COORDINATOR_HOST: coordinator
+      COORDINATOR_PORT: "8080"
+    command: >-
+      sh -lc 'clojure -M:worker'
+
+  tests:
+    image: clojure:temurin-21-tools-deps
+    working_dir: /app
+    depends_on:
+      - coordinator
+      - worker1
+      - worker2
+    volumes:
+      - ..:/app
+    environment:
+      COORDINATOR_HOST: coordinator
+      COORDINATOR_PORT: "8080"
+    command: >-
+      sh -lc 'sleep 8 && clojure -M -m cloud.test-runner'
