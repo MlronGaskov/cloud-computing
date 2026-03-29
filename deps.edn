@@ -5,11 +5,13 @@
 
  :aliases
  {:test
-  {:extra-deps 
+  {:extra-deps
    {io.github.cognitect-labs/test-runner
     {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
    :main-opts ["-m" "cognitect.test-runner"]}
 
   :coordinator {:main-opts ["-m" "cloud.coordinator.main"]}
   :worker      {:main-opts ["-m" "cloud.worker.main"]}
-  :demo        {:main-opts ["-m" "cloud.demo.app"]}}}
+  :demo        {}
+  :demo-app    {:main-opts ["-m" "cloud.demo.app"]}
+  :demo1       {:main-opts ["-m" "cloud.demo.demo1.main"]}}}
