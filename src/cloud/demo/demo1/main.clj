@@ -2,7 +2,7 @@
   (:require [cloud.demo.demo1.pipeline :as pipeline]
             [cloud.remote :as remote]))
 
-(remote/defremote remote-delivery-quote {} [delivery]
+(remote/defremote remote-delivery-quote [delivery]
   (pipeline/evaluate-delivery delivery))
 
 (def sample-delivery

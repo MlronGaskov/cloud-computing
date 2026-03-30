@@ -4,13 +4,13 @@
   (:import (demo.fn Lambdas)
            (java.util.function Function Predicate BinaryOperator)))
 
-(remote/defremote remote-java-function-test {} [f x]
+(remote/defremote remote-java-function-test [f x]
   (.apply ^Function f x))
 
-(remote/defremote remote-java-predicate-test {} [p x]
+(remote/defremote remote-java-predicate-test [p x]
   (.test ^Predicate p x))
 
-(remote/defremote remote-java-binop-test {} [op a b]
+(remote/defremote remote-java-binop-test [op a b]
   (.apply ^BinaryOperator op a b))
 
 (use-fixtures

@@ -91,7 +91,8 @@
                     (let [resp (call batch-id chunk)]
                       (if (:ok resp)
                         (:result resp)
-                        (throw (ex-info "dmap chunk failed" (assoc resp :chunk-idx idx))))))]
+                        (throw (ex-info "dmap chunk failed"
+                                        (assoc resp :chunk-idx idx))))))]
           (recur (inc i) (assoc running idx fut)))
 
         :else
@@ -121,41 +122,51 @@
         (.awaitTermination pool 5 TimeUnit/SECONDS)))))
 
 (defmacro defremote
+  [name args & body]
+  (let [fn-id (str (ns-name *ns*) "/" name)
+        local-sym (symbol (str name "-local"))]
+    `(do
+       (defn ~local-sym ~args ~@body)
+
+       (swap! cloud.remote/registry assoc ~fn-id {:fn-id ~fn-id
+                                                  :entry-var (var ~local-sym)})
+
+       (defn ~name ~args
+         (let [res# (cloud.remote/call ~fn-id ~@args)]
+           (if (:ok res#)
+             (:result res#)
+             (throw (ex-info "Remote call failed" res#))))))))
+
+(defmacro defdmap
   [name opts args & body]
   (let [opts (or opts {})
+        _ (when-not (= 1 (count args))
+            (throw (ex-info "defdmap requires exactly one argument"
+                            {:name name :args args})))
+        batch-id (str (ns-name *ns*) "/" name "#batch")
         fn-id (str (ns-name *ns*) "/" name)
-        batch-id (str fn-id "#batch")
         local-sym (symbol (str name "-local"))
         batch-local-sym (symbol (str name "-batch-local"))
+        x (first args)
+        workers (:workers opts)
         threads (:threads opts)]
     `(do
        (defn ~local-sym ~args ~@body)
 
-       ~@(when (= 1 (count args))
-           (let [x# (first args)]
-             [`(defn ~batch-local-sym [items#]
-                 (cloud.remote/batch-local-exec ~threads
-                                                (fn [~x#] (~local-sym ~x#))
-                                                items#))]))
+       (defn ~batch-local-sym [items#]
+         (cloud.remote/batch-local-exec ~threads
+                                        (fn [~x] (~local-sym ~x))
+                                        items#))
 
-       (swap! cloud.remote/registry assoc ~fn-id {:fn-id ~fn-id
-                                                  :entry-var (var ~local-sym)
-                                                  :opts ~opts})
+       (swap! cloud.remote/registry assoc ~batch-id {:fn-id ~batch-id
+                                                     :entry-var (var ~batch-local-sym)
+                                                     :opts ~opts})
 
-       ~@(when (= 1 (count args))
-           [`(swap! cloud.remote/registry assoc ~batch-id {:fn-id ~batch-id
-                                                           :entry-var (var ~batch-local-sym)
-                                                           :opts ~opts})])
-
-       (defn ~name ~args
-         (let [opts# ~opts]
-           (if (and (= 1 (count '~args))
-                    (cloud.remote/seqable-coll? ~(first args)))
-             (let [items# ~(first args)]
-               (cloud.remote/dmap* {:batch-id ~batch-id
-                                    :workers (:workers opts#)}
-                                   items#))
-             (let [res# (cloud.remote/call ~fn-id ~@args)]
-               (if (:ok res#)
-                 (:result res#)
-                 (throw (ex-info "Remote call failed" res#))))))))))
+       (defn ~name [items#]
+         (when-not (cloud.remote/seqable-coll? items#)
+           (throw (ex-info "Distributed map expects a non-map collection"
+                           {:fn-id ~fn-id
+                            :value items#})))
+         (cloud.remote/dmap* {:batch-id ~batch-id
+                              :workers ~workers}
+                             items#)))))

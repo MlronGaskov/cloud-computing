@@ -4,10 +4,10 @@
             [cloud.remote :as remote])
   (:import (demo.fn Lambdas)))
 
-(remote/defremote remote-stream-reduce-test {} [plan]
+(remote/defremote remote-stream-reduce-test [plan]
   (jstream/execute plan))
 
-(remote/defremote remote-stream-collect-test {} [plan]
+(remote/defremote remote-stream-collect-test [plan]
   (jstream/execute plan))
 
 (use-fixtures

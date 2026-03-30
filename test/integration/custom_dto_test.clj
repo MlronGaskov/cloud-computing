@@ -4,7 +4,7 @@
   (:import (demo.dto Point)
            (java.lang.reflect Constructor Method)))
 
-(remote/defremote remote-point-shift-test {} [p]
+(remote/defremote remote-point-shift-test [p]
   (let [cls (.getClass p)
         get-x (.getMethod cls "getX" (make-array Class 0))
         get-y (.getMethod cls "getY" (make-array Class 0))

@@ -4,7 +4,7 @@
   (:import (java.time Instant)
            (java.util UUID Date ArrayList HashMap)))
 
-(remote/defremote remote-java-stdlib-test {} [m]
+(remote/defremote remote-java-stdlib-test [m]
   {:uuid-same (= (:uuid m) (:uuid m))
    :instant-class (.getName (class (:instant m)))
    :date-ms (.getTime ^Date (:date m))

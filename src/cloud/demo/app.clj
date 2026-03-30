@@ -4,7 +4,10 @@
 (defn heavy [n]
   (reduce + (map #(* % %) (range n))))
 
-(remote/defremote remote-heavy {:workers 2 :threads 8} [n]
+(remote/defremote remote-heavy [n]
+  (heavy n))
+
+(remote/defdmap remote-heavy-map {:workers 2 :threads 8} [n]
   (heavy n))
 
 (defn bench []
@@ -15,9 +18,9 @@
     (time
      (doall (map remote-heavy xs)))
 
-    (println "\n== remote distributed ==")
+    (println "\n== remote distributed map ==")
     (time
-     (doall (remote-heavy xs)))
+     (doall (remote-heavy-map xs)))
 
     (println "\n(done)")))
 
